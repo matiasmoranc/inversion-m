@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Mis Inversiones</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 12px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+    }
+
+    .green {
+      color: #22c55e;
+    }
+
+    .red {
+      color: #ef4444;
+    }
+
+    .total {
+      border: 2px solid #334155;
+      background: #020617;
+    }
+
+    .loading {
+      text-align: center;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>📊 Mis Inversiones</h1>
+  <div id="app" class="loading">Cargando precios...</div>
+
+  <script>
+    const API_KEY = "d7p2bf9r01qr68pbf380d7p2bf9r01qr68pbf38g"; // 👈 finnHub
+
+    const stocks = [
+      {
+        name: "Tesla",
+        ticker: "TSLA",
+        shares: 0.601571,
+        invested: 293.56
+      },
+      {
+        name: "General Motors",
+        ticker: "GM",
+        shares: 3.434723,
+        invested: 230.98
+      },
+      {
+        name: "Take-Two",
+        ticker: "TTWO",
+        shares: 3.877103,
+        invested: 957.13
+      }
+    ];
+
+    // Obtener precio en vivo
+    async function getPrice(ticker) {
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${API_KEY}`);
+      const data = await res.json();
+      return data.c;
+    }
+
+    async function render() {
+      const app = document.getElementById("app");
+      app.innerHTML = "Actualizando...";
+
+      let totalInvested = 0;
+      let totalCurrent = 0;
+
+      try {
+        const prices = await Promise.all(stocks.map(s => getPrice(s.ticker)));
+
+        app.innerHTML = "";
+
+        stocks.forEach((stock, i) => {
+          const price = prices[i];
+
+          const value = stock.shares * price;
+          const diff = value - stock.invested;
+          const percent = (diff / stock.invested) * 100;
+
+          totalInvested += stock.invested;
+          totalCurrent += value;
+
+          const color = diff >= 0 ? "green" : "red";
+
+          const card = document.createElement("div");
+          card.className = "card";
+
+          card.innerHTML = `
+        <h2>${stock.name}</h2>
+
+        <div class="row">
+          <span>Acciones:</span>
+          <span>${stock.shares}</span>
+        </div>
+
+        <div class="row">
+          <span>Precio actual:</span>
+          <span>$${price.toFixed(2)}</span>
+        </div>
+
+        <div class="row">
+          <span>Valor actual:</span>
+          <span>$${value.toFixed(2)}</span>
+        </div>
+
+        <div class="row ${color}">
+          <span>Ganancia/Pérdida:</span>
+          <span>$${diff.toFixed(2)}</span>
+        </div>
+
+        <div class="row ${color}">
+          <span>%:</span>
+          <span>${percent.toFixed(2)}%</span>
+        </div>
+      `;
+
+          app.appendChild(card);
+        });
+
+        // TOTAL GLOBAL
+        const totalDiff = totalCurrent - totalInvested;
+        const totalPercent = (totalDiff / totalInvested) * 100;
+        const totalColor = totalDiff >= 0 ? "green" : "red";
+
+        const totalCard = document.createElement("div");
+        totalCard.className = "card total";
+
+        totalCard.innerHTML = `
+      <h2>📊 TOTAL</h2>
+
+      <div class="row">
+        <span>Total invertido:</span>
+        <span>$${totalInvested.toFixed(2)}</span>
+      </div>
+
+      <div class="row">
+        <span>Valor actual:</span>
+        <span>$${totalCurrent.toFixed(2)}</span>
+      </div>
+
+      <div class="row ${totalColor}">
+        <span>Ganancia/Pérdida:</span>
+        <span>$${totalDiff.toFixed(2)}</span>
+      </div>
+
+      <div class="row ${totalColor}">
+        <span>% total:</span>
+        <span>${totalPercent.toFixed(2)}%</span>
+      </div>
+    `;
+
+        app.appendChild(totalCard);
+
+      } catch (err) {
+        app.innerHTML = "❌ Error cargando precios";
+        console.error(err);
+      }
+    }
+
+    // 🔄 cargar al iniciar
+    render();
+
+    // 🔁 auto actualizar cada 30 segundos
+    setInterval(render, 30000);
+
+  </script>
+
+</body>
+
+</html>
